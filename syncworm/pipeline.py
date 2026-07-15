@@ -10,6 +10,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import tempfile
+import time
 from pathlib import Path
 
 from syncworm import bake as bake_module
@@ -42,8 +43,12 @@ def _process_video(
         )
 
     scratch_wav = work_dir / f"{job.video_filepath.stem}_scratch.wav"
+    extraction_start = time.perf_counter()
     extraction.extract_audio_track(job.video_filepath, scratch_wav, stream_index=scratch_index)
+    job.extraction_seconds = time.perf_counter() - extraction_start
+    logger.info("%s: extraction took %.1fs", job.video_filepath, job.extraction_seconds)
 
+    search_start = time.perf_counter()
     job.search_results = search_module.search_pool(
         job.video_filepath,
         scratch_wav,
@@ -51,11 +56,16 @@ def _process_video(
         config.confidence_threshold,
         sample_rate=config.correlation_sample_rate,
     )
+    job.search_seconds = time.perf_counter() - search_start
+    logger.info(
+        "%s: search took %.1fs across %d candidates", job.video_filepath, job.search_seconds, len(candidates)
+    )
     job.matched_sources = search_module.matched_sources(job.search_results)
 
     if config.dry_run or not job.matched_sources:
         return
 
+    bake_start = time.perf_counter()
     video_duration = extraction.probe_container_duration(job.video_filepath)
     bake_sources = []
     for i, result in enumerate(job.matched_sources):
@@ -89,6 +99,8 @@ def _process_video(
         keep_original_audio_track=config.keep_original_audio_track,
         source_priority=config.source_priority,
     )
+    job.trim_and_bake_seconds = time.perf_counter() - bake_start
+    logger.info("%s: trim+bake took %.1fs", job.video_filepath, job.trim_and_bake_seconds)
 
 
 def run_pipeline(config: SyncWormConfig) -> RunSummary:

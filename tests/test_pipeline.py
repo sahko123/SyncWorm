@@ -26,6 +26,20 @@ def _base_config(tmp_path, **overrides) -> SyncWormConfig:
     return SyncWormConfig(**kwargs)
 
 
+def test_video_job_records_per_stage_timing(tmp_path):
+    config = _base_config(tmp_path)
+    video_path = config.video_input_dir / "clip.mp4"
+    boom_path = config.audio_pool_dir / "boom.wav"
+    _make_synced_pair(video_path, boom_path, video_duration=2.0, lead_in=0.0, seed=200)
+
+    summary = run_pipeline(config)
+
+    job = summary.video_jobs[0]
+    assert job.extraction_seconds is not None and job.extraction_seconds >= 0
+    assert job.search_seconds is not None and job.search_seconds >= 0
+    assert job.trim_and_bake_seconds is not None and job.trim_and_bake_seconds >= 0
+
+
 def test_multi_source_one_passes_one_fails(tmp_path):
     config = _base_config(tmp_path)
     video_path = config.video_input_dir / "clip.mp4"

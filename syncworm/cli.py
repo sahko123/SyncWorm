@@ -111,6 +111,15 @@ def print_report(summary: RunSummary) -> None:
             )
         if job.chosen_default_track:
             print(f"  default track: {job.chosen_default_track}")
+        timing_parts = []
+        if job.extraction_seconds is not None:
+            timing_parts.append(f"extraction={job.extraction_seconds:.1f}s")
+        if job.search_seconds is not None:
+            timing_parts.append(f"search={job.search_seconds:.1f}s")
+        if job.trim_and_bake_seconds is not None:
+            timing_parts.append(f"trim+bake={job.trim_and_bake_seconds:.1f}s")
+        if timing_parts:
+            print(f"  timing: {', '.join(timing_parts)}")
 
     print("\n=== Summary ===")
     print(f"Videos processed: {len(summary.video_jobs)}")

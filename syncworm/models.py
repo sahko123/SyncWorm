@@ -32,6 +32,9 @@ class VideoJob:
     chosen_default_track: str | None = None
     scratch_track_index_used: int | None = None
     scratch_track_fallback: bool = False
+    extraction_seconds: float | None = None  # time spent extracting the scratch track
+    search_seconds: float | None = None  # time spent correlating against the whole pool
+    trim_and_bake_seconds: float | None = None  # time spent trimming/channel-handling/baking
 
 
 @dataclass(frozen=True)
