@@ -5,45 +5,12 @@ from pathlib import Path
 import pytest
 
 from audio_fixtures import broadband_signal, write_wav
+from video_fixtures import make_synced_pair as _make_synced_pair
 from syncworm import extraction, search as search_module
 from syncworm.config import AudioChannelMode, SyncWormConfig
 from syncworm.pipeline import run_pipeline, run_summary_to_dict
 
 SAMPLE_RATE = 16000
-
-
-def _make_synced_pair(
-    video_path: Path,
-    candidate_path: Path,
-    video_duration: float,
-    lead_in: float,
-    seed: int,
-) -> None:
-    """A video with embedded scratch audio, and a pool candidate wav that syncs to
-    it with a known offset == lead_in (candidate has lead_in extra seconds up front).
-    """
-    base = broadband_signal(video_duration + lead_in, seed, SAMPLE_RATE)
-    lead_in_samples = int(round(lead_in * SAMPLE_RATE))
-    scratch = base[lead_in_samples:]
-
-    video_path.parent.mkdir(parents=True, exist_ok=True)
-    scratch_wav = video_path.parent / f"_scratch_src_{seed}.wav"
-    write_wav(scratch_wav, scratch, SAMPLE_RATE)
-
-    result = subprocess.run(
-        [
-            "ffmpeg", "-y",
-            "-f", "lavfi", "-i", f"color=c=blue:s=64x64:d={video_duration}",
-            "-i", str(scratch_wav),
-            "-shortest", "-c:v", "libx264", "-c:a", "aac",
-            str(video_path),
-        ],
-        capture_output=True, text=True,
-    )
-    assert result.returncode == 0, result.stderr
-
-    candidate_path.parent.mkdir(parents=True, exist_ok=True)
-    write_wav(candidate_path, base, SAMPLE_RATE)
 
 
 def _base_config(tmp_path, **overrides) -> SyncWormConfig:
