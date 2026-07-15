@@ -40,7 +40,8 @@ def _run_ffprobe(args: list[str]) -> dict:
     return json.loads(result.stdout)
 
 
-def _probe_container_duration(media_path: str | Path) -> float:
+def probe_container_duration(media_path: str | Path) -> float:
+    """Overall container duration in seconds (e.g. a video's play length)."""
     data = _run_ffprobe(["-show_entries", "format=duration", str(media_path)])
     duration = data.get("format", {}).get("duration")
     return float(duration) if duration is not None else 0.0
@@ -66,7 +67,7 @@ def probe_audio_streams(media_path: str | Path) -> list[AudioStreamInfo]:
         duration = stream.get("duration")
         if duration is None:
             if container_duration is None:
-                container_duration = _probe_container_duration(media_path)
+                container_duration = probe_container_duration(media_path)
             duration = container_duration
         streams.append(
             AudioStreamInfo(
