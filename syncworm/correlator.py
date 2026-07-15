@@ -69,23 +69,36 @@ def correlate(
     correlation = signal.correlate(candidate, scratch, mode="full", method="fft")
     lags = signal.correlation_lags(len(candidate), len(scratch), mode="full")
 
-    abs_correlation = np.abs(correlation)
-    peak_index = int(np.argmax(abs_correlation))
+    peak_index = int(np.argmax(np.abs(correlation)))
     peak_lag = int(lags[peak_index])
 
     offset_seconds = peak_lag / sample_rate
-    confidence_score = _confidence(abs_correlation, peak_index)
+    confidence_score = _normalized_confidence(scratch, candidate, peak_lag)
 
     return CorrelationOutcome(offset_seconds=offset_seconds, confidence_score=confidence_score)
 
 
-def _confidence(abs_correlation: np.ndarray, peak_index: int) -> float:
-    """Peak magnitude relative to the correlation's overall spread.
+def _normalized_confidence(scratch: np.ndarray, candidate: np.ndarray, peak_lag: int) -> float:
+    """Normalized cross-correlation coefficient (bounded ~[0, 1]) at the winning lag.
 
-    A sharp, distinct peak (real match) scores much higher than a flat,
-    noise-like correlation (unrelated audio).
+    Computed only over the samples that actually overlap at peak_lag, rather
+    than the whole raw correlation array's stddev — a stddev-based score is
+    biased upward by how many lags get searched (extreme-value statistics
+    mean even unrelated audio occasionally spikes high once you search
+    enough lag positions), which this avoids since it only ever looks at one
+    fixed-length aligned window.
     """
-    std = abs_correlation.std()
-    if std == 0:
+    scratch_start = max(0, -peak_lag)
+    candidate_start = max(0, peak_lag)
+    overlap = min(len(scratch) - scratch_start, len(candidate) - candidate_start)
+    if overlap <= 0:
         return 0.0
-    return float(abs_correlation[peak_index] / std)
+
+    scratch_segment = scratch[scratch_start : scratch_start + overlap]
+    candidate_segment = candidate[candidate_start : candidate_start + overlap]
+
+    numerator = abs(float(np.dot(scratch_segment, candidate_segment)))
+    denominator = float(np.linalg.norm(scratch_segment) * np.linalg.norm(candidate_segment))
+    if denominator == 0:
+        return 0.0
+    return numerator / denominator

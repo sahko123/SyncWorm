@@ -1,25 +1,18 @@
 import numpy as np
 import pytest
-from scipy.io import wavfile
 
+from audio_fixtures import broadband_signal, write_wav
 from syncworm.correlator import correlate, load_mono_signal
 
 SAMPLE_RATE = 16000
 
 
 def _broadband_signal(duration_seconds: float, seed: int) -> np.ndarray:
-    """A noise-like signal with enough structure to correlate sharply, deterministic per seed."""
-    rng = np.random.default_rng(seed)
-    n = int(duration_seconds * SAMPLE_RATE)
-    return rng.normal(0, 1, n)
+    return broadband_signal(duration_seconds, seed, SAMPLE_RATE)
 
 
 def _write_wav(path, samples: np.ndarray, sample_rate: int = SAMPLE_RATE, channels: int = 1):
-    data = np.clip(samples, -1.0, 1.0) * 32767
-    data = data.astype(np.int16)
-    if channels == 2:
-        data = np.column_stack([data, data])
-    wavfile.write(str(path), sample_rate, data)
+    write_wav(path, samples, sample_rate, channels)
 
 
 def test_correlate_recovers_known_positive_offset(tmp_path):
@@ -38,7 +31,7 @@ def test_correlate_recovers_known_positive_offset(tmp_path):
     outcome = correlate(scratch_path, candidate_path, sample_rate=SAMPLE_RATE)
 
     assert outcome.offset_seconds == pytest.approx(shift_seconds, abs=0.01)
-    assert outcome.confidence_score > 10
+    assert outcome.confidence_score > 0.9
 
 
 def test_correlate_recovers_known_negative_offset(tmp_path):
@@ -81,6 +74,8 @@ def test_confidence_low_for_unrelated_audio(tmp_path):
     matched = correlate(matched_scratch_path, matched_candidate_path, sample_rate=SAMPLE_RATE)
     unrelated = correlate(unrelated_scratch_path, unrelated_candidate_path, sample_rate=SAMPLE_RATE)
 
+    assert matched.confidence_score > 0.9
+    assert unrelated.confidence_score < 0.1
     assert matched.confidence_score > unrelated.confidence_score * 3
 
 
