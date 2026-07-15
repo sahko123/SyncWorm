@@ -173,26 +173,31 @@ def test_shared_source_matches_multiple_videos(tmp_path):
     summary = run_pipeline(config)
 
     jobs_by_name = {j.video_filepath.name: j for j in summary.video_jobs}
-    matches_a = {r.candidate_name for r in jobs_by_name["cam_a.mp4"].matched_sources}
-    matches_b = {r.candidate_name for r in jobs_by_name["cam_b.mp4"].matched_sources}
+    matches_a = {r.candidate_name: r for r in jobs_by_name["cam_a.mp4"].matched_sources}
+    matches_b = {r.candidate_name: r for r in jobs_by_name["cam_b.mp4"].matched_sources}
 
     assert "shared" in matches_a
     assert "shared" in matches_b
+    # each video independently recovers its own correct offset against the same file
+    assert matches_a["shared"].offset_seconds == pytest.approx(0.0, abs=0.02)
+    assert matches_b["shared"].offset_seconds == pytest.approx(lead_in_b, abs=0.02)
     assert "shared" not in {p.name.removesuffix(".wav") for p in summary.unmatched_audio_files}
 
 
-def test_scratch_track_index_fallback(tmp_path):
+def test_scratch_track_index_fallback(tmp_path, caplog):
     config = _base_config(tmp_path, scratch_track_index=1)
     video_path = config.video_input_dir / "clip.mp4"
     boom_path = config.audio_pool_dir / "boom.wav"
     _make_synced_pair(video_path, boom_path, video_duration=2.0, lead_in=0.0, seed=8)
 
-    summary = run_pipeline(config)
+    with caplog.at_level("WARNING"):
+        summary = run_pipeline(config)
 
     job = summary.video_jobs[0]
     assert job.scratch_track_fallback is True
     assert job.scratch_track_index_used == 0
     assert {r.candidate_name for r in job.matched_sources} == {"boom"}
+    assert any("falling back to 0" in message for message in caplog.messages)
 
 
 def test_dry_run_produces_summary_without_media_files(tmp_path):

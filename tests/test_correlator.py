@@ -101,6 +101,28 @@ def test_stereo_candidate_downmix_does_not_affect_offset_accuracy(tmp_path):
     assert stereo_outcome.offset_seconds == pytest.approx(shift_seconds, abs=0.01)
 
 
+def test_stereo_scratch_downmix_does_not_affect_offset_accuracy(tmp_path):
+    base = _broadband_signal(6.0, seed=6)
+    shift_seconds = 0.75
+    shift_samples = int(shift_seconds * SAMPLE_RATE)
+
+    scratch = base[shift_samples:]
+    candidate = base  # mono external source (e.g. a lav mic)
+
+    scratch_mono_path = tmp_path / "scratch_mono.wav"
+    scratch_stereo_path = tmp_path / "scratch_stereo.wav"
+    candidate_path = tmp_path / "candidate.wav"
+    _write_wav(scratch_mono_path, scratch, channels=1)
+    _write_wav(scratch_stereo_path, scratch, channels=2)
+    _write_wav(candidate_path, candidate, channels=1)
+
+    mono_outcome = correlate(scratch_mono_path, candidate_path, sample_rate=SAMPLE_RATE)
+    stereo_outcome = correlate(scratch_stereo_path, candidate_path, sample_rate=SAMPLE_RATE)
+
+    assert stereo_outcome.offset_seconds == pytest.approx(mono_outcome.offset_seconds, abs=0.01)
+    assert stereo_outcome.offset_seconds == pytest.approx(shift_seconds, abs=0.01)
+
+
 def test_load_mono_signal_is_mean_centered(tmp_path):
     base = _broadband_signal(2.0, seed=5) + 0.5  # DC offset
     path = tmp_path / "offset.wav"
