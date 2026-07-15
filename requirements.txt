@@ -1,4 +1,3 @@
 numpy
 scipy
-ffmpeg-python
 pydantic>=2

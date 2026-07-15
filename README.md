@@ -6,8 +6,7 @@ cross-correlation, then bakes the matched, synced audio onto that video as new t
 — non-destructively, with the original camera scratch audio preserved. It supports
 multiple mic sources matching a single video.
 
-This is a spinout from [DITz](https://github.com/), following the same
-Python/library-first-then-Qt-UI pattern.
+This is a spinout from DITz, following the same Python/library-first-then-Qt-UI pattern.
 
 ## Core v1 principles
 
@@ -39,6 +38,33 @@ docs/           SyncWorm_Plan.md — full implementation plan and design rationa
 
 See [`docs/SyncWorm_Plan.md`](docs/SyncWorm_Plan.md) for the complete pipeline design,
 config schema, data structures, and testing plan.
+
+## Setup
+
+Requires Python 3.11+ and `ffmpeg`/`ffprobe` on `PATH`.
+
+```
+python -m venv .venv
+.venv/Scripts/activate        # .venv/bin/activate on macOS/Linux
+pip install -r requirements-dev.txt
+pytest
+```
+
+## Usage
+
+```
+python -m syncworm --video-input-dir <dir> --audio-pool-dir <dir> --output-dir <dir>
+```
+
+Or via a JSON config file matching the schema in
+[`docs/SyncWorm_Plan.md`](docs/SyncWorm_Plan.md#config-schema-v1):
+
+```
+python -m syncworm --config config.json
+```
+
+CLI flags override values from `--config` when both are given. Add `--dry-run` to
+run search/validation and produce the report without writing any output media.
 
 ## Status
 
