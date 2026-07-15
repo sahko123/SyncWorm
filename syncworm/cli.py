@@ -8,6 +8,8 @@ import logging
 import sys
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from syncworm.config import AudioChannelMode, SyncWormConfig
 from syncworm.models import RunSummary
 from syncworm.pipeline import run_pipeline, run_summary_to_dict
@@ -24,8 +26,23 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--config", type=Path, help="Path to a JSON config file (see docs/SyncWorm_Plan.md)."
     )
-    parser.add_argument("--video-input-dir", type=Path)
-    parser.add_argument("--audio-pool-dir", type=Path)
+    parser.add_argument(
+        "input_dir",
+        type=Path,
+        nargs="?",
+        default=None,
+        help=(
+            "Folder scanned recursively for both video and audio files, split by "
+            "extension (the default way to run). Use --video-input-dir/--audio-pool-dir "
+            "instead if video and audio live in separate trees."
+        ),
+    )
+    parser.add_argument(
+        "--video-input-dir", type=Path, help="Overrides input_dir for video scanning."
+    )
+    parser.add_argument(
+        "--audio-pool-dir", type=Path, help="Overrides input_dir for audio scanning."
+    )
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--scratch-track-index", type=int, default=None)
     parser.add_argument("--confidence-threshold", type=float, default=None)
@@ -47,6 +64,7 @@ def build_config(args: argparse.Namespace) -> SyncWormConfig:
     base = json.loads(args.config.read_text()) if args.config else {}
 
     overrides = {
+        "input_dir": args.input_dir,
         "video_input_dir": args.video_input_dir,
         "audio_pool_dir": args.audio_pool_dir,
         "output_dir": args.output_dir,
@@ -61,14 +79,21 @@ def build_config(args: argparse.Namespace) -> SyncWormConfig:
     if args.dry_run:
         base["dry_run"] = True
 
-    missing = [f for f in ("video_input_dir", "audio_pool_dir", "output_dir") if f not in base]
-    if missing:
+    if "output_dir" not in base:
+        raise SystemExit("Missing required config field: output_dir (pass --config or --output-dir)")
+
+    has_input_dir = "input_dir" in base
+    has_split_dirs = "video_input_dir" in base and "audio_pool_dir" in base
+    if not has_input_dir and not has_split_dirs:
         raise SystemExit(
-            f"Missing required config field(s): {', '.join(missing)} "
-            f"(pass --config, or --video-input-dir/--audio-pool-dir/--output-dir)"
+            "Missing input location: pass an input_dir (positional, --config, or "
+            "otherwise), or both --video-input-dir and --audio-pool-dir"
         )
 
-    return SyncWormConfig.model_validate(base)
+    try:
+        return SyncWormConfig.model_validate(base)
+    except ValidationError as exc:
+        raise SystemExit(f"Invalid config: {exc}") from exc
 
 
 def print_report(summary: RunSummary) -> None:

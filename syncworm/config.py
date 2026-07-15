@@ -16,8 +16,9 @@ class AudioChannelMode(str, Enum):
 
 
 class SyncWormConfig(BaseModel):
-    video_input_dir: Path
-    audio_pool_dir: Path
+    input_dir: Path | None = None  # single folder scanned for both video and audio, by extension
+    video_input_dir: Path | None = None  # overrides input_dir for video scanning if set
+    audio_pool_dir: Path | None = None  # overrides input_dir for audio scanning if set
     output_dir: Path
 
     scratch_track_index: int = 0
@@ -33,6 +34,16 @@ class SyncWormConfig(BaseModel):
 
     @model_validator(mode="after")
     def _validate(self) -> "SyncWormConfig":
+        if self.video_input_dir is None:
+            self.video_input_dir = self.input_dir
+        if self.audio_pool_dir is None:
+            self.audio_pool_dir = self.input_dir
+        if self.video_input_dir is None or self.audio_pool_dir is None:
+            raise ValueError(
+                "Provide input_dir (scanned for both video and audio by extension), or "
+                "both video_input_dir and audio_pool_dir explicitly"
+            )
+
         if self.scratch_track_index < 0:
             raise ValueError("scratch_track_index must be >= 0")
         if self.confidence_threshold < 0:

@@ -64,6 +64,35 @@ def test_output_naming_requires_stem_placeholder(tmp_path):
         SyncWormConfig(**kwargs)
 
 
+def test_input_dir_populates_both_video_and_audio_dirs(tmp_path):
+    input_dir = tmp_path / "shoot"
+    input_dir.mkdir()
+    output_dir = tmp_path / "output"
+
+    config = SyncWormConfig(input_dir=input_dir, output_dir=output_dir)
+
+    assert config.video_input_dir == input_dir
+    assert config.audio_pool_dir == input_dir
+
+
+def test_explicit_dirs_override_input_dir(tmp_path):
+    input_dir = tmp_path / "shoot"
+    video_dir = tmp_path / "videos_only"
+    input_dir.mkdir()
+    video_dir.mkdir()
+    output_dir = tmp_path / "output"
+
+    config = SyncWormConfig(input_dir=input_dir, video_input_dir=video_dir, output_dir=output_dir)
+
+    assert config.video_input_dir == video_dir
+    assert config.audio_pool_dir == input_dir
+
+
+def test_missing_both_input_dir_and_split_dirs_rejected(tmp_path):
+    with pytest.raises(ValidationError):
+        SyncWormConfig(output_dir=tmp_path / "output")
+
+
 def test_load_from_json_file(tmp_path):
     kwargs = _base_kwargs(tmp_path)
     config_path = tmp_path / "config.json"

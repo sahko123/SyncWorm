@@ -52,6 +52,17 @@ pytest
 
 ## Usage
 
+By default, point it at one folder containing both your video files and your candidate
+audio pool — files are split by extension, so they can sit side by side or in any
+subfolder structure:
+
+```
+python -m syncworm <input_dir> --output-dir <dir>
+```
+
+If video and audio live in separate trees, use `--video-input-dir`/`--audio-pool-dir`
+instead (either can also override just one side of `<input_dir>`):
+
 ```
 python -m syncworm --video-input-dir <dir> --audio-pool-dir <dir> --output-dir <dir>
 ```
