@@ -34,6 +34,15 @@ class VideoJob:
     scratch_track_fallback: bool = False
 
 
+@dataclass(frozen=True)
+class BakeSource:
+    """A matched source ready to mux in — trimmed and channel-handled."""
+
+    name: str
+    filepath: Path
+    confidence_score: float
+
+
 @dataclass
 class RunSummary:
     video_jobs: list[VideoJob]
