@@ -37,7 +37,9 @@ docs/           SyncWorm_Plan.md — full implementation plan and design rationa
 ```
 
 See [`docs/SyncWorm_Plan.md`](docs/SyncWorm_Plan.md) for the complete pipeline design,
-config schema, data structures, and testing plan.
+config schema, data structures, and testing plan. See
+[`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) for real-world timing data
+(extraction vs. correlation cost) tracked across runs.
 
 ## Setup
 
